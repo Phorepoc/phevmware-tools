@@ -15,6 +15,7 @@
 #include <e32std.h>
 #include <e32debug.h>
 #include <charconv.h>
+#include <utf.h>
 #include "vmw_dndcp.h"
 
 // dndCPMsgV4.h
