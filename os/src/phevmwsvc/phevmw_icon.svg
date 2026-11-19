@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="tiny" width="100" height="100" viewBox="0 0 100 100">
+  <title>phevmw</title>
+  <!-- Original artwork, GPL-3.0-only (The Phorepoc Authors): a clipboard between two arrows -->
+  <rect x="8" y="8" width="84" height="84" rx="16" ry="16" fill="#2F6DB5"/>
+  <rect x="30" y="24" width="40" height="52" rx="5" ry="5" fill="#EAE9E3"/>
+  <rect x="40" y="18" width="20" height="12" rx="4" ry="4" fill="#0C1455"/>
+  <rect x="37" y="40" width="26" height="4" fill="#2F6DB5"/>
+  <rect x="37" y="50" width="26" height="4" fill="#2F6DB5"/>
+  <rect x="37" y="60" width="16" height="4" fill="#2F6DB5"/>
+  <path d="M14 46L24 38L24 54Z" fill="#FFFFFF"/>
+  <path d="M86 46L76 38L76 54Z" fill="#FFFFFF"/>
+</svg>

@@ -1,0 +1,14 @@
+#include <platform_paths.hrh>
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: LGPL-2.1-only
+// phevmwsvc -- the VMware tools' service: GuestRPC over the PheBackdoor channel (CommDD opens it), TCLO, copy and paste.
+TARGET          phevmwsvc.exe
+TARGETTYPE      exe
+UID             0x100039CE 0xE5A0F211
+CAPABILITY      CommDD
+VENDORID        0
+
+OS_LAYER_SYSTEMINCLUDE
+SOURCEPATH      .
+SOURCE          phevmwsvc.cpp vmw_backdoor.cpp vmw_dndcp.cpp
+LIBRARY         euser.lib efsrv.lib bafl.lib etext.lib estor.lib charconv.lib

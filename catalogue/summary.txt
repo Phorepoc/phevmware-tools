@@ -1,0 +1,1 @@
+Share the clipboard between the VMware host and Phorepoc: the VMware tools, free software.

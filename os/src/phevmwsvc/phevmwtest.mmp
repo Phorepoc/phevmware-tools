@@ -1,0 +1,15 @@
+#include <platform_paths.hrh>
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: LGPL-2.1-only
+// phevmwtest -- phevmwsvc with a self-test (RPCI round trip through guestinfo, a text put on the Symbian clipboard 15 s in). A boot-test component (SSM_TEST=phevmwtest), never part of the package.
+TARGET          phevmwtest.exe
+TARGETTYPE      exe
+UID             0x100039CE 0xE5A0F212
+CAPABILITY      CommDD
+VENDORID        0
+
+OS_LAYER_SYSTEMINCLUDE
+SOURCEPATH      .
+SOURCE          phevmwsvc.cpp vmw_backdoor.cpp vmw_dndcp.cpp
+LIBRARY         euser.lib efsrv.lib bafl.lib etext.lib estor.lib charconv.lib
+MACRO           PHEVMW_SELFTEST

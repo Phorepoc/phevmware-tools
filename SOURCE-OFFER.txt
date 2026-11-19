@@ -1,0 +1,19 @@
+VMware tools for Phorepoc -- licence notice and source offer
+
+This package contains phevmwsvc.exe, a service that talks to the VMware host through the backdoor channel of the Phorepoc PC image
+and shares the clipboard (text) between the host and the device. Everything in it is licensed under the GNU Lesser General Public
+License version 2.1 only (LGPL-2.1). The icon is our own artwork under the same licence. The licence text is installed with the
+package in \resource\phevmw\licences\.
+
+Corresponding source, available to anyone who has this package, for at least three years after the release you installed it from:
+
+  1. Our files (os/src/phevmwsvc, registry, recipes) and the scripts that build and package the service:
+       https://github.com/Phorepoc/phevmware-tools   (the release tag of this package)
+     with the toolchain images and build tools in https://github.com/Phorepoc/toolchain and https://github.com/Phorepoc/pdk.
+  2. The protocols the service implements are published as source by open-vm-tools (https://github.com/vmware/open-vm-tools);
+     no open-vm-tools file is part of this package.
+
+You may modify the package and relink it with your own build of the service: the source above is all that is needed.
+
+Written offer: if the links above are no longer available, send a request to the address given on the Phorepoc organisation page
+https://github.com/Phorepoc and we will send you the corresponding source on a medium of your choice for the cost of the medium.

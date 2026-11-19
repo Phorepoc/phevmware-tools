@@ -1,0 +1,35 @@
+phevmware-tools: the VMware tools for Phorepoc (service, GuestRPC over the backdoor, copy and paste)
+Copyright The Phorepoc Authors (see AUTHORS)
+
+Phorepoc was founded by Kyriakos Bompotis.
+
+Our files are licensed under the GNU Lesser General Public License, version 2.1 only (LICENSE, LICENSES/LGPL-2.1-only.txt). That
+is the licence of the open-vm-tools code whose protocols this package speaks. Our own code is new: it is written for Symbian and
+follows the published open-vm-tools source where it must (the steps and register layout of the backdoor message protocol, the TCLO
+loop, the numbers and layouts of the copy and paste messages), so it is a reimplementation for another operating system, not a copy.
+Because the upstream licence says "version 2.1 and no later version", this package is LGPL-2.1-only, not "or later".
+
+What of open-vm-tools (github.com/vmware/open-vm-tools, checked 2026-11-19, master) this package depends on, each file's own licence
+stated. All of these files say: "GNU Lesser General Public License ... version 2.1 and no later version"; the library files of
+lib/ add the alternative "Common Development and Distribution License 1.0", which we do not use:
+  * lib/message/message.c, lib/include/message.h, lib/include/guest_msg_def.h, lib/backdoor/backdoor.c, lib/include/backdoor_def.h
+    ("Copyright (C) 1999-2021 VMware, Inc."): the message channel (open, send, receive, close), the status bits, the backdoor
+    command numbers. Reimplemented in os/src/phevmwsvc/vmw_backdoor.cpp.
+  * lib/rpcOut/rpcout.c, lib/rpcIn/rpcin.c, lib/rpcChannel/rpcChannel.c, lib/include/vmware/guestrpc/tclodefs.h: the RPCI request and
+    its "1 " / "0 " reply, the TCLO polling loop ("OK " / "ERROR " results, "reset" answered "ATR <app>", "ping"). Reimplemented in
+    vmw_backdoor.cpp and phevmwsvc.cpp.
+  * services/plugins/dndcp (dnd/dndCPMsgV4.[ch], dnd/dndClipboard.[ch], dnd/dnd.h, dnd/rpcBase.h, dndGuest/rpcV4Util.cpp,
+    dndGuest/copyPasteRpcV4.cc, dndGuest/dndCPTransportGuestRpc.[ch]pp, dndGuest/guestCopyPaste*.cc, vmCopyPasteDnDWrapper.cpp;
+    "Copyright (C) 2005-2021 VMware, Inc.", LGPL-2.1 only; the plug-in's COPYING is the LGPL-2.1): the version-4 message header,
+    commands and packet splitting, the clipboard serialisation, the capability handshake, the guest's copy and paste behaviour.
+    Reimplemented in vmw_dndcp.cpp.
+No file of open-vm-tools is part of this package; nothing was compiled from it.
+
+os/src/phevmwsvc/rphebackdoor.h is a copy of the interface header of the PC image's kernel channel (PheBackdoor). In the image it is
+"EPL-2.0 OR GPL-2.0-or-later"; its authors (the Phorepoc Authors) license this copy under LGPL-2.1-only too. The kernel side of the
+channel is not in this package and carries no GPL or LGPL code: it is part of the operating system image.
+
+The icon (os/src/phevmwsvc/phevmw_icon.svg) is original artwork, LGPL-2.1-only.
+
+VMware is a trademark of Broadcom Inc. and/or its subsidiaries; it is used here only to name the software this package works with.
+This package is not affiliated with or endorsed by VMware or Broadcom.
