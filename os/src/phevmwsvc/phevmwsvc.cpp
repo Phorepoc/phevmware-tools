@@ -115,7 +115,7 @@ public:
 		WriteClipTextL(iFs, aText);
 		delete iLast;
 		iLast = NULL;
-		iLast = aText.AllocL();				// our own write is not a change to report
+		iLast = ReadClipTextL(iFs);			// our own write is not a change to report (the text as the clipboard now holds it)
 		}
 	virtual HBufC* GuestTextL() { return ReadClipTextL(iFs); }
 private:
