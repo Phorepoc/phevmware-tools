@@ -10,5 +10,5 @@ VENDORID        0
 
 OS_LAYER_SYSTEMINCLUDE
 SOURCEPATH      .
-SOURCE          phevmwsvc.cpp vmw_backdoor.cpp vmw_dndcp.cpp
+SOURCE          phevmwsvc.cpp vmw_backdoor.cpp vmw_dndcp.cpp vmw_hgfs.cpp
 LIBRARY         euser.lib efsrv.lib bafl.lib etext.lib estor.lib charconv.lib

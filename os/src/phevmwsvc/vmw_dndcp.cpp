@@ -27,11 +27,13 @@ enum
 enum { KTypeDnd = 1, KTypeCp = 2, KTypeFt = 3 };
 enum { KSrcHost = 1, KSrcController = 2, KSrcGuest = 3 };
 enum { KStatusSuccess = 0, KStatusError = 1, KStatusInvalidPacket = 5 };
-enum { KCapValid = 1 << 0, KCapDnd = 1 << 1, KCapCp = 1 << 2, KCapPlainTextDnd = 1 << 3, KCapPlainTextCp = 1 << 4 };
+enum { KCapValid = 1 << 0, KCapDnd = 1 << 1, KCapCp = 1 << 2, KCapPlainTextDnd = 1 << 3, KCapPlainTextCp = 1 << 4, KCapFileDnd = 1 << 9 };
 const TUint32 KMaxBinary = 1 << 22;
 
 // what this guest can do: copy and paste of plain text
 const TUint32 KGuestCpCaps = KCapValid | KCapCp | KCapPlainTextCp;
+// drag and drop of files from the host
+const TUint32 KGuestDndCaps = KCapValid | KCapDnd | KCapFileDnd;
 
 // dnd.h: CPFORMAT_MAX; the text format is 1 (NUL terminated UTF-8)
 const TUint32 KCpFormatMax = 11, KCpFormatText = 1;
@@ -53,13 +55,23 @@ static void Log(const char* aMsg, TInt a = 0, TInt b = 0)
 	RDebug::Printf("[phevmw] %s %d %d", aMsg, a, b);
 	}
 
-CVmwDndCp* CVmwDndCp::NewL(CVmwBackdoor& aBd, MVmwClip& aClip)
+CVmwDndCp* CVmwDndCp::NewL(CVmwBackdoor& aBd, MVmwClip& aClip, RFs& aFs)
 	{
-	return new (ELeave) CVmwDndCp(aBd, aClip);
+	CVmwDndCp* c = new (ELeave) CVmwDndCp(aBd, aClip, aFs);
+	CleanupStack::PushL(c);
+	c->ConstructL();
+	CleanupStack::Pop(c);
+	return c;
+	}
+
+void CVmwDndCp::ConstructL()
+	{
+	iHgfs = CVmwHgfs::NewL(iFs);
 	}
 
 CVmwDndCp::~CVmwDndCp()
 	{
+	delete iHgfs;
 	iIn[0].Close();
 	iIn[1].Close();
 	iOut.Close();
@@ -153,7 +165,7 @@ void CVmwDndCp::SendPing(TVmwTransport aT)
 	InitMsg(m, aT, KCmdPing, 0);
 	m.iP[0] = 4;										// version 4.0
 	m.iP[1] = 0;
-	m.iP[2] = aT == EVmwCopyPaste ? KGuestCpCaps : KCapValid;
+	m.iP[2] = aT == EVmwCopyPaste ? KGuestCpCaps : KGuestDndCaps;
 	TInt r = Send(aT, m, KNullDesC8());
 	Log("ping sent: transport, status", aT, r);
 	}
@@ -379,7 +391,7 @@ void CVmwDndCp::Deliver(TVmwTransport aT, const TVmwMsg& aH, const TDesC8& aBin)
 		InitMsg(m, aT, KCmdPingReply, aH.iSession);
 		m.iP[0] = 4;
 		m.iP[1] = 0;
-		m.iP[2] = aT == EVmwCopyPaste ? KGuestCpCaps : KCapValid;
+		m.iP[2] = aT == EVmwCopyPaste ? KGuestCpCaps : KGuestDndCaps;
 		Send(aT, m, KNullDesC8());
 		break;
 		}
@@ -412,7 +424,167 @@ void CVmwDndCp::Deliver(TVmwTransport aT, const TVmwMsg& aH, const TDesC8& aBin)
 				break;
 				}
 			}
+		if (aT == EVmwDnd)
+			{
+			OnDnd(aH, aBin);
+			break;
+			}
 		Log("unhandled command", aH.iCmd, aT);
 		break;
 		}
+	}
+
+// ---- drag and drop from the host (files) -------------------------------------------------------------------------------
+//
+// The host drags: DND_CMD_SRC_DRAG_BEGIN (the clipboard describing the items) -> we make a staging directory and answer
+// SRC_DRAG_BEGIN_DONE; the cursor feedback says "copy"; at the drop (SRC_DROP) we answer SRC_DROP_DONE with the staging directory as a
+// CP name; the host then writes the files into it through HGFS requests (TCLO command "f", answered by CVmwHgfs); GET_FILES_DONE
+// ends it: the files move to C:\Data\Received\ and a notice says so. A cancel, or a failed copy, removes the staging directory.
+
+enum
+	{
+	KDndSrcDragBegin = 1005, KDndSrcDragBeginDone = 1006, KDndSrcDrop = 1007, KDndSrcDropDone = 1008, KDndSrcCancel = 1009,
+	KDndUpdateFeedback = 1014, KDndGetFilesDone = 1016, KDndQueryExiting = 1018, KDndDragNotPending = 1019
+	};
+const TInt KDropCopy = 1;		// DND_DROPEFFECT DROP_COPY
+
+_LIT(KReceivedDir, "C:\\Data\\Received\\");
+_LIT(KStagingBase, "C:\\Data\\Received\\.phevmw-");
+
+void CVmwDndCp::CleanStaging()
+	{
+	if (iStaging.Length())
+		{
+		CFileMan* fm = NULL;
+		TRAPD(r, fm = CFileMan::NewL(iFs));
+		if (r == KErrNone)
+			{
+			TFileName all(iStaging);
+			all.Append(_L("*"));
+			fm->Delete(all, CFileMan::ERecurse);
+			delete fm;
+			}
+		iFs.RmDir(iStaging);
+		}
+	iStaging.Zero();
+	iHgfs->ClearRoot();
+	iDropping = EFalse;
+	}
+
+void CVmwDndCp::OnDnd(const TVmwMsg& aH, const TDesC8& aBin)
+	{
+	switch (aH.iCmd)
+		{
+	case KDndSrcDragBegin:
+		{
+		CleanStaging();
+		iDropSession = aH.iSession;
+		iStaging.Copy(KStagingBase);
+		iStaging.AppendNum((TInt)aH.iSession);
+		iStaging.Append('\\');
+		TInt r = iFs.MkDirAll(iStaging);
+		Log("dnd: drag begin: clipboard bytes, staging dir status", aBin.Length(), r);
+		if (r != KErrNone && r != KErrAlreadyExists)
+			{
+			iStaging.Zero();
+			SendCmdReply(EVmwDnd, KDndSrcDragBegin, KStatusError);
+			break;
+			}
+		iHgfs->SetRoot(iStaging);
+		iDropping = ETrue;
+		iCount = 0;
+		TVmwMsg m;
+		InitMsg(m, EVmwDnd, KDndSrcDragBeginDone, aH.iSession);
+		m.iP[0] = 4;
+		m.iP[1] = 0;
+		Send(EVmwDnd, m, KNullDesC8());
+		TVmwMsg f;
+		InitMsg(f, EVmwDnd, KDndUpdateFeedback, aH.iSession);
+		f.iP[0] = KDropCopy;
+		Send(EVmwDnd, f, KNullDesC8());
+		break;
+		}
+	case KDndSrcDrop:
+		{
+		Log("dnd: drop: dropping", iDropping);
+		if (!iDropping)
+			{
+			SendCmdReply(EVmwDnd, KDndSrcDrop, KStatusError);
+			break;
+			}
+		RBuf8 cp;
+		if (cp.Create(KMaxFileName) != KErrNone)
+			break;
+		iHgfs->RootAsCpName(cp);
+		TVmwMsg m;
+		InitMsg(m, EVmwDnd, KDndSrcDropDone, aH.iSession);
+		Send(EVmwDnd, m, cp);
+		cp.Close();
+		break;
+		}
+	case KDndSrcCancel:
+		Log("dnd: cancelled");
+		CleanStaging();
+		break;
+	case KDndGetFilesDone:
+		Log("dnd: files done: status", aH.iStatus);
+		FinishDrop(aH.iStatus == KStatusSuccess);
+		break;
+	case KDndQueryExiting:
+	case KDndDragNotPending:
+		break;
+	default:
+		Log("dnd: unhandled command", aH.iCmd);
+		break;
+		}
+	}
+
+void CVmwDndCp::FinishDrop(TBool aOk)
+	{
+	if (!iStaging.Length())
+		return;
+	TInt moved = 0;
+	if (aOk)
+		{
+		iFs.MkDirAll(KReceivedDir);
+		CFileMan* fm = NULL;
+		TRAPD(r, fm = CFileMan::NewL(iFs));
+		if (r == KErrNone)
+			{
+			CDir* dir = NULL;
+			if (iFs.GetDir(iStaging, KEntryAttMaskSupported, ESortByName, dir) == KErrNone && dir)
+				{
+				for (TInt i = 0; i < dir->Count(); ++i)
+					{
+					TFileName src(iStaging), dst(KReceivedDir);
+					src.Append((*dir)[i].iName);
+					dst.Append((*dir)[i].iName);
+					if ((*dir)[i].IsDir())
+						{
+						src.Append('\\');
+						dst.Append('\\');
+						}
+					TInt e = fm->Move(src, dst, CFileMan::EOverWrite | CFileMan::ERecurse);
+					Log("dnd: move to Received: status", e);
+					if (e == KErrNone)
+						++moved;
+					}
+				delete dir;
+				}
+			delete fm;
+			}
+		}
+	CleanStaging();
+	Log("dnd: items received", moved);
+	if (moved)
+		{
+		TBuf<64> note;
+		note.Format(_L("Received %d item(s) from the host"), moved);
+		User::InfoPrint(note);
+		}
+	}
+
+TInt CVmwDndCp::OnHgfs(const TDesC8& aRequest, RBuf8& aReply)
+	{
+	return iHgfs->Process(aRequest, aReply);
 	}

@@ -144,8 +144,8 @@ private:
 void CVmwSvc::StartL()
 	{
 	iBd = CVmwBackdoor::NewL();					// KErrNotSupported: no VMware backdoor here
-	iCp = CVmwDndCp::NewL(*iBd, *this);
 	User::LeaveIfError(iFs.Connect());
+	iCp = CVmwDndCp::NewL(*iBd, *this, iFs);
 	iLast = HBufC::NewL(0);
 	iIn.CreateL(256);
 	iResult.CreateL(256);
@@ -195,6 +195,24 @@ void CVmwSvc::RegisterCaps()
 		iCp->SendPing(EVmwCopyPaste);
 	else
 		Log("the host does not speak copy and paste version 4", iCpVersion);
+	// drag and drop: the same handshake
+	reply.Close();
+	if (reply.Create(256) != KErrNone)
+		return;
+	r = VmwRpci(*iBd, KCapDndVersion(), reply);
+	Log("tools.capability.dnd_version: status", r);
+	reply.Zero();
+	r = VmwRpci(*iBd, KQueryDndVersion(), reply);
+	Log("vmx.capability.dnd_version: status", r);
+	LogText("  host drag and drop version", reply);
+	TLex8 lx2(reply);
+	iDndVersion = 0;
+	lx2.Val(iDndVersion);
+	reply.Close();
+	if (iDndVersion == 4)
+		iCp->SendPing(EVmwDnd);
+	else
+		Log("the host does not speak drag and drop version 4", iDndVersion);
 	}
 
 void CVmwSvc::SetResult(const TDesC8& aStatus, const TDesC8& aText)
@@ -243,6 +261,14 @@ void CVmwSvc::Dispatch(const TDesC8& aCmd)
 		{
 		SetResult(KOk);
 		iCp->OnPacket(EVmwCopyPaste, args);
+		}
+	else if (name == _L8("f"))
+		{
+		// an HGFS request (a drag and drop writing its files): the reply is the result text
+		RBuf8 rep;
+		TInt hr = iCp->OnHgfs(args, rep);
+		SetResult(KOk, hr == KErrNone ? (const TDesC8&)rep : (const TDesC8&)KNullDesC8());
+		rep.Close();
 		}
 	else if (name == _L8("dnd.transport"))
 		{

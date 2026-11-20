@@ -8,7 +8,9 @@
 #define VMW_DNDCP_H
 
 #include <e32base.h>
+#include <f32file.h>
 #include "vmw_backdoor.h"
+#include "vmw_hgfs.h"
 
 // the Symbian side of the clipboard
 class MVmwClip
@@ -33,7 +35,7 @@ struct TVmwMsg
 class CVmwDndCp : public CBase
 	{
 public:
-	static CVmwDndCp* NewL(CVmwBackdoor& aBd, MVmwClip& aClip);
+	static CVmwDndCp* NewL(CVmwBackdoor& aBd, MVmwClip& aClip, RFs& aFs);
 	~CVmwDndCp();
 	// the packet of a copypaste.transport or dnd.transport command from the host (everything after the command and its space)
 	void OnPacket(TVmwTransport aT, const TDesC8& aPacket);
@@ -41,8 +43,14 @@ public:
 	void RequestHostClip();									// ask the host for its clipboard
 	void PushGuestClip();									// send the guest's text unasked (a change)
 	TUint32 HostCaps() const { return iHostCaps; }
+	// the host's HGFS requests (TCLO command "f"): the reply, empty if there is no drop in progress
+	TInt OnHgfs(const TDesC8& aRequest, RBuf8& aReply);
 private:
-	CVmwDndCp(CVmwBackdoor& aBd, MVmwClip& aClip) : iBd(aBd), iClip(aClip), iHostCaps(0), iOutOffset(0), iOutT(EVmwCopyPaste) {}
+	CVmwDndCp(CVmwBackdoor& aBd, MVmwClip& aClip, RFs& aFs) : iBd(aBd), iClip(aClip), iFs(aFs), iHostCaps(0), iOutOffset(0), iOutT(EVmwCopyPaste), iDropping(EFalse), iDropSession(0), iCount(0) {}
+	void ConstructL();
+	void OnDnd(const TVmwMsg& aH, const TDesC8& aBin);
+	void FinishDrop(TBool aOk);
+	void CleanStaging();
 	TInt Send(TVmwTransport aT, const TVmwMsg& aHdr, const TDesC8& aBinary);
 	void SendChunk(TVmwTransport aT);
 	void Deliver(TVmwTransport aT, const TVmwMsg& aH, const TDesC8& aBinary);
@@ -51,6 +59,12 @@ private:
 	TInt SendCmdReply(TVmwTransport aT, TUint32 aCmd, TUint32 aStatus);
 	CVmwBackdoor& iBd;
 	MVmwClip& iClip;
+	RFs& iFs;
+	CVmwHgfs* iHgfs;
+	TFileName iStaging;
+	TBool iDropping;
+	TUint32 iDropSession;
+	TInt iCount;
 	TUint32 iHostCaps;
 	// a multi-packet message coming in (one per transport) and one going out
 	RBuf8 iIn[2];
