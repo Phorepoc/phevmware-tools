@@ -227,8 +227,14 @@ void CVmwSvc::SetResult(const TDesC8& aStatus, const TDesC8& aText)
 void CVmwSvc::Dispatch(const TDesC8& aCmd)
 	{
 	TInt sp = aCmd.Locate(' ');
-	TPtrC8 name = sp < 0 ? aCmd : aCmd.Left(sp);
-	TPtrC8 args = sp < 0 ? TPtrC8() : aCmd.Mid(sp + 1);
+	// (both branches TPtrC8: a ?: between a TDesC8& and a TPtrC8 would slice the TPtrC8 into a TDesC8 with no pointer)
+	TPtrC8 name(aCmd);
+	TPtrC8 args(KNullDesC8);
+	if (sp >= 0)
+		{
+		name.Set(aCmd.Left(sp));
+		args.Set(aCmd.Mid(sp + 1));
+		}
 	_LIT8(KOk, "OK ");
 	_LIT8(KErr, "ERROR ");
 	if (name == _L8("reset"))
