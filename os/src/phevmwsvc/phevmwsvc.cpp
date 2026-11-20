@@ -46,9 +46,12 @@ static void Log(const char* aMsg, TInt a = 0, TInt b = 0)
 
 static void LogText(const char* aMsg, const TDesC8& aText)
 	{
-	TBuf<120> w;
-	w.Copy(aText.Left(w.MaxLength()));
-	RDebug::Print(_L("[phevmw] %s: %S"), aMsg, &w);
+	// RDebug::Printf takes an 8-bit format: %s is a char* (RDebug::Print, 16-bit, would read it as UTF-16 and run off the string)
+	TBuf8<121> t(aText.Left(120));
+	for (TInt i = 0; i < t.Length(); ++i)
+		if (t[i] < 0x20 || t[i] > 0x7E)
+			t[i] = '.';
+	RDebug::Printf("[phevmw] %s: %s", aMsg, t.PtrZ());
 	}
 
 // ---- the Symbian clipboard ---------------------------------------------------------------------------------------
