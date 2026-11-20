@@ -11,7 +11,7 @@
 #   3. the TCLO side: the host's "reset" is answered, the guest application registers ("toolbox-dnd" in vmware.log) and the copy and
 #      paste version handshake ran
 # The VM needs a FORMATTED C: disk (an unformatted one makes the CenRep and telephony servers die with -20): make one with the image's
-# make_disk.sh (adaptation-x32 os/tools/phorepoc-x86) and give the vmx a flat vmdk descriptor over it. Set mks.enable3d = "FALSE" in the
+# make_disk.sh (os/tools/phorepoc-x86 of the PC image source) and give the vmx a flat vmdk descriptor over it. Set mks.enable3d = "FALSE" in the
 # vmx if the display hangs with the host screen locked.
 # usage: vmware_smoke.sh <dir with phorepoc-pc.iso> [seconds]
 set -u
