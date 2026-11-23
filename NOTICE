@@ -3,15 +3,15 @@ Copyright The Phorepoc Authors (see AUTHORS)
 
 Phorepoc was founded by Kyriakos Bompotis.
 
-Our files are licensed under the GNU Lesser General Public License, version 2.1 only (LICENSE, LICENSES/LGPL-2.1-only.txt). That
-is the licence of the open-vm-tools code whose protocols this package speaks. Our own code is new: it is written for Symbian and
+Phorepoc's files are licensed under the GNU Lesser General Public License, version 2.1 only (LICENSE, LICENSES/LGPL-2.1-only.txt). That
+is the licence of the open-vm-tools code whose protocols this package speaks. Phorepoc's own code is new: it is written for Symbian and
 follows the published open-vm-tools source where it must (the steps and register layout of the backdoor message protocol, the TCLO
 loop, the numbers and layouts of the copy and paste messages), so it is a reimplementation for another operating system, not a copy.
 Because the upstream licence says "version 2.1 and no later version", this package is LGPL-2.1-only, not "or later".
 
 What of open-vm-tools (github.com/vmware/open-vm-tools, checked 2026-11-19, master) this package depends on, each file's own licence
 stated. All of these files say: "GNU Lesser General Public License ... version 2.1 and no later version"; the library files of
-lib/ add the alternative "Common Development and Distribution License 1.0", which we do not use:
+lib/ add the alternative "Common Development and Distribution License 1.0", which Phorepoc does not use:
   * lib/message/message.c, lib/include/message.h, lib/include/guest_msg_def.h, lib/backdoor/backdoor.c, lib/include/backdoor_def.h
     ("Copyright (C) 1999-2021 VMware, Inc."): the message channel (open, send, receive, close), the status bits, the backdoor
     command numbers. Reimplemented in os/src/phevmwsvc/vmw_backdoor.cpp.
